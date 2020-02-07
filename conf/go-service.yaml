@@ -1,0 +1,4 @@
+port: 5000
+fixer:
+  URL: http://data.fixer.io/api/
+  key: c97bd7f2207227eccf3979f79b41ae59

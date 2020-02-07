@@ -1,0 +1,12 @@
+/.go/
+/bin/
+Gopkg.lock
+main
+
+/vendor/
+
+/.go-service.pid
+/go-service.log
+
+.container-*
+.dockerfile-*
