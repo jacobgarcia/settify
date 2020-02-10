@@ -38,7 +38,7 @@ fi
 export CGO_ENABLED=0
 export GOARCH="${ARCH}"
 export GOOS="${GOOS}"
-export GOCACHE=/go/.cache
+export GOCACHE=/Users/jacobgarcia/go/.cache
 
 echo "Go installing app with PKG: ${PKG}"
 go build -o bin/${ARCH}/${BIN} ${PKG}/cmd/${BIN}

@@ -1,9 +1,9 @@
 # Docker targets - dependent on basic makefile
 #
 
-REGISTRY ?= hub.docker.com/adrianforsius
+REGISTRY ?= hub.docker.com/jacobgarcian
 
-IMAGE := $(REGISTRY)/go-service
+IMAGE := $(REGISTRY)/settify
 
 BUILD_IMAGE ?= golang:1.10-alpine
 

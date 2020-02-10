@@ -5,10 +5,9 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"github.com/jacobgarcia/settify/fixer"
+	"github.com/jacobgarcia/settify/server"
 	"github.com/valyala/fasthttp"
-
-	"github.com/adrianforsius/go-service/fixer"
-	"github.com/adrianforsius/go-service/server"
 )
 
 func TestService(t *testing.T) {

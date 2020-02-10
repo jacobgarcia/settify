@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/adrianforsius/go-service/rate"
+	"github.com/jacobgarcia/settify/rate"
 )
 
 func New(u, t string) *client {

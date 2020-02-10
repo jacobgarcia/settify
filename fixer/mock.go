@@ -1,7 +1,7 @@
 package fixer
 
 import (
-	"github.com/adrianforsius/go-service/rate"
+	"github.com/jacobgarcia/settify/rate"
 )
 
 type Mock struct{}

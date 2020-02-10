@@ -11,8 +11,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/viper"
 
-	"github.com/adrianforsius/go-service/fixer"
-	"github.com/adrianforsius/go-service/server"
+	"github.com/jacobgarcia/settify/fixer"
+	"github.com/jacobgarcia/settify/server"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 
 	viper := viper.New()
-	viper.SetConfigName("go-service")
+	viper.SetConfigName("settify")
 	viper.AddConfigPath(*confDirFlag)
 
 	// Use env for values if declared

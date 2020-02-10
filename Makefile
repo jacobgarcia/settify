@@ -17,10 +17,10 @@ ENV ?= DEV
 PORT ?= 5000
 
 # The binary to build (just the basename).
-BIN := go-service
+BIN := settify
 
 # This repo's root import path (under GOPATH).
-PKG := github.com/adrianforsius/$(BIN)
+PKG := github.com/jacobgarcia/$(BIN)
 
 ARCH ?= amd64
 GOOS ?= linux
@@ -73,7 +73,7 @@ files-clean:
 build: build-dirs
 	@go build -o bin/$(ARCH)/$(BIN) cmd/$(BIN)/main.go
 
-GOLDEN_PKG ?= github.com/adrianforsius/go-service
+GOLDEN_PKG ?= github.com/jacobgarcia/settify
 update-golden-files:
 	@go test $(GOLDEN_PKG) -update
 
