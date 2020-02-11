@@ -7,34 +7,30 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/jacobgarcia/settify/rate"
 	"github.com/jacobgarcia/settify/transport"
 )
 
-func New(u, i, s string) *client {
+func New(a, u, i, s string) *client {
 	return &client{
-		URL:    u,
-		id:     i,
-		secret: s,
+		authURL: a,
+		URL:     u,
+		id:      i,
+		secret:  s,
 	}
 }
 
 type client struct {
-	URL    string
-	id     string
-	secret string
+	authURL string
+	URL     string
+	id      string
+	secret  string
 }
 
-type ListResponse struct {
-	Timestamp int64     `json:"timestamp"`
-	Rates     rate.Rate `json:"rates"`
-}
-
-func (c client) LatestRate() (*rate.Provider, error) {
+func (c client) Authenticate() (*rate.AuthenticationResponse, error) {
 	client := &http.Client{}
-	uri := fmt.Sprintf("%s/api/token", c.URL)
+	uri := fmt.Sprintf("%s/api/token", c.authURL)
 
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
@@ -83,14 +79,15 @@ func (c client) LatestRate() (*rate.Provider, error) {
 		return nil, fmt.Errorf("%s", resp)
 	}
 
-	var list ListResponse
-	err = json.Unmarshal(response, &list)
+	var authResponse rate.AuthenticationResponse
+	err = json.Unmarshal(response, &authResponse)
 
-	rate := rate.Provider{
-		Rate:    list.Rates.MXN,
-		Updated: time.Unix(list.Timestamp, 0).Format(time.RFC3339),
-		Name:    "fixer",
+	auth := rate.AuthenticationResponse{
+		Token:      authResponse.Token,
+		Type:       authResponse.Type,
+		Expiration: authResponse.Expiration,
+		Scope:      authResponse.Scope,
 	}
 
-	return &rate, err
+	return &auth, err
 }

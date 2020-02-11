@@ -1,16 +1,14 @@
 package rate
 
-type Rate struct {
-	USD float64 `json:"USD"`
-	MXN float64 `json:"MXN"`
-}
-
+// Service expose authentication process as a service
 type Service interface {
-	LatestRate() (*Provider, error)
+	Authenticate() (*AuthenticationResponse, error)
 }
 
-type Provider struct {
-	Rate    float64 `json:"value"`
-	Updated string  `json:"last_updated"`
-	Name    string  `json:"name"`
+// AuthenticationResponse is the response struct from Spotify
+type AuthenticationResponse struct {
+	Token      string `json:"access_token"`
+	Type       string `json:"token_type"`
+	Expiration int    `json:"expires_in"`
+	Scope      string `json:"scope"`
 }

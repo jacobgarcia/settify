@@ -22,15 +22,14 @@ func CreateRouter(s rate.Service, logger log.Logger) http.Handler {
 		kithttp.ServerErrorEncoder(transport.ErrorEncoder),
 	}
 
-	getRateHandler := kithttp.NewServer(
-		ratesEndpoint(s, logger),
-		transport.DecodeGetRateRequest,
+	getAuthHandler := kithttp.NewServer(
+		authEndpoint(s, logger),
+		transport.DecodeAuthRequest,
 		transport.EncodeResponse,
 		opts...,
 	)
 
-	r.Handle("/rates", getRateHandler).Methods("GET")
-
+	r.Handle("/authenticate", getAuthHandler).Methods("GET")
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
@@ -38,21 +37,12 @@ func CreateRouter(s rate.Service, logger log.Logger) http.Handler {
 	return r
 }
 
-func ratesEndpoint(r rate.Service, logger log.Logger) endpoint.Endpoint {
+func authEndpoint(r rate.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		logger.Log("rates endpoint hit")
-		provider, err := r.LatestRate()
+		auth, err := r.Authenticate()
 		if err != nil {
-			return provider, err
+			return auth, err
 		}
-		return ProviderResponse{
-			Providers: []rate.Provider{
-				*provider,
-			},
-		}, err
+		return auth, err
 	}
-}
-
-type ProviderResponse struct {
-	Providers []rate.Provider
 }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func DecodeGetRateRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func DecodeAuthRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	// If we would want to parse anything in query/parameteres
 	// function also needed for NewServer
 	return r, nil

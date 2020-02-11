@@ -6,6 +6,6 @@ import (
 
 type Mock struct{}
 
-func (m Mock) LatestRate() (*rate.Provider, error) {
-	return &rate.Provider{}, nil
+func (m Mock) Authenticate() (*rate.AuthenticationResponse, error) {
+	return &rate.AuthenticationResponse{}, nil
 }
