@@ -2,3 +2,6 @@ port: 5000
 fixer:
   URL: http://data.fixer.io/api/
   key: c97bd7f2207227eccf3979f79b41ae59
+spotify:
+  URL: http://api.spotify.com
+  key: 8be10436cdeb41deab45fc7502265679

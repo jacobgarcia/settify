@@ -5,14 +5,25 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 
 	"github.com/jacobgarcia/settify/rate"
+	"github.com/jacobgarcia/settify/transport"
 )
 
-func MakeHTTPHandler(s rate.Service, logger log.Logger) http.Handler {
+// CreateRouter is in charge to define all routes
+func CreateRouter(s rate.Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
+
+	getRateHandler := kithttp.NewServer(
+		ratesEndpoint(s, logger),
+		transport.DecodeGetRateRequest,
+		transport.EncodeResponse,
+	)
+
+	r.Handle("/rates", getRateHandler).Methods("GET")
 
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

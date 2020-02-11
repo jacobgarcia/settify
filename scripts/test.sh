@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 export CGO_ENABLED=0
-export GOCACHE=/go/.cache
+export GOCACHE=/Users/jacobgarcia/go/.cache
 
 echo "Running tests:"
 go test -cover ./...

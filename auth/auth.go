@@ -17,7 +17,8 @@ type service struct {
 	clients map[string]string
 }
 
-type customClaims struct {
+// CustomClaims are pieces of information asserted about a subject.
+type CustomClaims struct {
 	ClientID string `json:"clientId"`
 	jwt.StandardClaims
 }
@@ -25,7 +26,7 @@ type customClaims struct {
 const expiration = 120
 
 func generateToken(signingKey []byte, clientID string) (string, error) {
-	claims := customClaims{
+	claims := CustomClaims{
 		clientID,
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Second * expiration).Unix(),

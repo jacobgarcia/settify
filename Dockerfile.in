@@ -13,6 +13,8 @@
 # limitations under the License.
 
 FROM ARG_FROM
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+RUN update-ca-certificates
 
 MAINTAINER SMMX Go Service <go-service@tech.com>
 

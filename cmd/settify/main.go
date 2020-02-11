@@ -1,4 +1,4 @@
-// Package main implements the go-service command.
+// Package main implements the settify command
 package main
 
 import (
@@ -11,15 +11,15 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/viper"
 
-	"github.com/jacobgarcia/settify/fixer"
 	"github.com/jacobgarcia/settify/server"
+	"github.com/jacobgarcia/settify/spotify"
 )
 
 func main() {
 	confDirFlag := flag.String("conf-dir", "conf", "custom conf dir folder")
 	flag.Parse()
 
-	glog.Info("starting..")
+	glog.Info("Starting server...")
 
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 
@@ -32,19 +32,19 @@ func main() {
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig()
 	if err != nil {
-		glog.Exitf("Fatal error config file: %s", err)
+		glog.Exitf("Fatal error at configuration file: %s", err)
 	}
 
-	fixerClient := fixer.New(viper.GetString("fixer.URL"), viper.GetString("fixer.key"))
+	spotifyClient := spotify.New(viper.GetString("spotify.URL"), viper.GetString("spotify.key"))
 
-	handler := server.MakeHTTPHandler(fixerClient, logger)
+	router := server.CreateRouter(spotifyClient, logger)
 	port := viper.GetString("port")
 
 	if err != nil {
 		glog.Exitf("Error starting the server: %s", err)
 	}
 
-	glog.Info("serving on port %s", port)
-	err = http.ListenAndServe(":"+port, handler)
+	glog.Info("Serving on port: ", port)
+	err = http.ListenAndServe(":"+port, router)
 	glog.Exitf("Server stopped: %s", err)
 }
