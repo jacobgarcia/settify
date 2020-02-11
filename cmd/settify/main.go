@@ -35,7 +35,7 @@ func main() {
 		glog.Exitf("Fatal error at configuration file: %s", err)
 	}
 
-	spotifyClient := spotify.New(viper.GetString("spotify.URL"), viper.GetString("spotify.key"))
+	spotifyClient := spotify.New(viper.GetString("spotify.URL"), viper.GetString("spotify.id"), viper.GetString("spotify.secret"))
 
 	router := server.CreateRouter(spotifyClient, logger)
 	port := viper.GetString("port")

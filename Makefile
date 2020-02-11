@@ -77,4 +77,7 @@ GOLDEN_PKG ?= github.com/jacobgarcia/settify
 update-golden-files:
 	@go test $(GOLDEN_PKG) -update
 
+up:
+	@go run cmd/$(BIN)/main.go
+	
 include docker.mk

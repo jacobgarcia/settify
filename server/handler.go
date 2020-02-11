@@ -17,10 +17,16 @@ import (
 func CreateRouter(s rate.Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 
+	opts := []kithttp.ServerOption{
+		kithttp.ServerErrorLogger(logger),
+		kithttp.ServerErrorEncoder(transport.ErrorEncoder),
+	}
+
 	getRateHandler := kithttp.NewServer(
 		ratesEndpoint(s, logger),
 		transport.DecodeGetRateRequest,
 		transport.EncodeResponse,
+		opts...,
 	)
 
 	r.Handle("/rates", getRateHandler).Methods("GET")
