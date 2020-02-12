@@ -33,7 +33,7 @@ type Client struct {
 // This is a microservices architecture
 type Service interface {
 	Authenticate() (*AuthenticationResponse, error)
-	Intersect() (*AuthenticationResponse, error)
+	Intersect(token string) (*AuthenticationResponse, error)
 }
 
 // AuthenticationResponse is the response struct from Spotify
@@ -111,8 +111,8 @@ func (c Client) Authenticate() (*AuthenticationResponse, error) {
 }
 
 // Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Intersect() (*AuthenticationResponse, error) {
-	uri := fmt.Sprintf("%s/api/token", c.URL)
+func (c Client) Intersect(token string) (*AuthenticationResponse, error) {
+	uri := fmt.Sprintf("%s/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp", c.URL)
 
 	req, err := http.NewRequest("POST", uri, bytes.NewBufferString(data.Encode()))
 
@@ -120,7 +120,7 @@ func (c Client) Intersect() (*AuthenticationResponse, error) {
 		return nil, err
 	}
 
-	req.Header.Add("Authorization", "Bearer 123")
+	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := httpClient.Do(req)

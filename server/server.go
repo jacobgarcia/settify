@@ -61,7 +61,8 @@ func authEndpoint(r spotify.Service, logger log.Logger) endpoint.Endpoint {
 
 func intersectEndpoint(s spotify.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		auth, err := s.Intersect()
+		req := request.(transport.SetRequest)
+		auth, err := s.Intersect(req.Token)
 		if err != nil {
 			return auth, err
 		}
