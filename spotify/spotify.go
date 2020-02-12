@@ -33,7 +33,7 @@ type Client struct {
 // This is a microservices architecture
 type Service interface {
 	Authenticate() (*AuthenticationResponse, error)
-	Intersect(token string) (*AuthenticationResponse, error)
+	Intersect(token string) (*TrackResponse, error)
 }
 
 // AuthenticationResponse is the response struct from Spotify
@@ -42,6 +42,10 @@ type AuthenticationResponse struct {
 	Type       string `json:"token_type"`
 	Expiration int    `json:"expires_in"`
 	Scope      string `json:"scope"`
+}
+
+type TrackResponse struct {
+	Explicit bool `json:"explicit"`
 }
 
 var httpClient *http.Client = &http.Client{}
@@ -111,17 +115,16 @@ func (c Client) Authenticate() (*AuthenticationResponse, error) {
 }
 
 // Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Intersect(token string) (*AuthenticationResponse, error) {
+func (c Client) Intersect(token string) (*TrackResponse, error) {
 	uri := fmt.Sprintf("%s/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp", c.URL)
 
-	req, err := http.NewRequest("POST", uri, bytes.NewBufferString(data.Encode()))
+	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
 
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := httpClient.Do(req)
 
@@ -157,15 +160,12 @@ func (c Client) Intersect(token string) (*AuthenticationResponse, error) {
 		return nil, fmt.Errorf("%s", resp)
 	}
 
-	var authResponse AuthenticationResponse
-	err = json.Unmarshal(response, &authResponse)
+	var trackResponse TrackResponse
+	err = json.Unmarshal(response, &trackResponse)
 
-	auth := AuthenticationResponse{
-		Token:      authResponse.Token,
-		Type:       authResponse.Type,
-		Expiration: authResponse.Expiration,
-		Scope:      authResponse.Scope,
+	track := TrackResponse{
+		Explicit: trackResponse.Explicit,
 	}
 
-	return &auth, err
+	return &track, err
 }
