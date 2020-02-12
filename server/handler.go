@@ -29,6 +29,11 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 		opts...,
 	)
 
+	opts = []kithttp.ServerOption{
+		kithttp.ServerErrorLogger(logger),
+		kithttp.ServerErrorEncoder(transport.IntersectErrorEncoder),
+	}
+
 	getIntersectHandler := kithttp.NewServer(
 		intersectEndpoint(s, logger),
 		transport.DecodeAuthRequest,

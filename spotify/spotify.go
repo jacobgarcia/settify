@@ -11,8 +11,9 @@ import (
 	"github.com/jacobgarcia/settify/transport"
 )
 
-func New(a, u, i, s string) *client {
-	return &client{
+// New instatiates a new API client for Spotify
+func New(a, u, i, s string) *Client {
+	return &Client{
 		authURL: a,
 		URL:     u,
 		id:      i,
@@ -20,7 +21,8 @@ func New(a, u, i, s string) *client {
 	}
 }
 
-type client struct {
+// Client contains the required params to connect succesfully to Spotify API
+type Client struct {
 	authURL string
 	URL     string
 	id      string
@@ -42,11 +44,13 @@ type AuthenticationResponse struct {
 	Scope      string `json:"scope"`
 }
 
-func (c client) Authenticate() (*AuthenticationResponse, error) {
-	client := &http.Client{}
+var httpClient *http.Client = &http.Client{}
+var data url.Values = url.Values{}
+
+// Authenticate is the method for authentication and getting a valid Spotify token
+func (c Client) Authenticate() (*AuthenticationResponse, error) {
 	uri := fmt.Sprintf("%s/api/token", c.authURL)
 
-	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
 
 	req, err := http.NewRequest("POST", uri, bytes.NewBufferString(data.Encode()))
@@ -58,7 +62,7 @@ func (c client) Authenticate() (*AuthenticationResponse, error) {
 	req.SetBasicAuth(c.id, c.secret)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	res, err := client.Do(req)
+	res, err := httpClient.Do(req)
 
 	if err != nil {
 		return nil, err
@@ -106,12 +110,9 @@ func (c client) Authenticate() (*AuthenticationResponse, error) {
 	return &auth, err
 }
 
-func (c client) Intersect() (*AuthenticationResponse, error) {
-	client := &http.Client{}
-	uri := fmt.Sprintf("%s/api/token", c.authURL)
-
-	data := url.Values{}
-	data.Set("grant_type", "client_credentials")
+// Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
+func (c Client) Intersect() (*AuthenticationResponse, error) {
+	uri := fmt.Sprintf("%s/api/token", c.URL)
 
 	req, err := http.NewRequest("POST", uri, bytes.NewBufferString(data.Encode()))
 
@@ -119,10 +120,10 @@ func (c client) Intersect() (*AuthenticationResponse, error) {
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.id, c.secret)
+	req.Header.Add("Authorization", "Bearer 123")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	res, err := client.Do(req)
+	res, err := httpClient.Do(req)
 
 	if err != nil {
 		return nil, err
@@ -136,16 +137,15 @@ func (c client) Intersect() (*AuthenticationResponse, error) {
 	}
 
 	if res.StatusCode != 200 {
-		var errResponse transport.ErrorResponse
+		var errResponse transport.IntersectError
 		err = json.Unmarshal(response, &errResponse)
 
 		if err != nil {
 			return nil, err
 		}
 
-		errResponse = transport.ErrorResponse{
-			Message: errResponse.Message,
-			Status:  res.StatusCode,
+		errResponse = transport.IntersectError{
+			Error: errResponse.Error,
 		}
 
 		resp, err := json.Marshal(errResponse)
