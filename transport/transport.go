@@ -7,20 +7,26 @@ import (
 	"net/http"
 )
 
-type SetRequest struct {
-	Token string
+// AuthRequest is an authenticated request containing token
+type AuthRequest struct {
+	Token          string
+	FirstPlaylist  string
+	SecondPlaylist string
 }
 
-func DecodeAuthRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	keys, ok := r.URL.Query()["token"]
+// DecodeAuthRequest serves as a middleware function to intercept requests in order to get the Authorization Bearer Token
+func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, error) {
+	token := req.Header.Get("Authorization")
+	firstPlaylist := req.URL.Query().Get("firstPlaylist")
+	secondPlaylist := req.URL.Query().Get("secondPlaylist")
 
-	if !ok || len(keys[0]) < 1 {
-		fmt.Println("URL Param token is missing")
+	if token == "" {
+		fmt.Println("Token is missing")
 		var errResponse IntersectError
 		var nestedError NestedError
 
 		nestedError = NestedError{
-			Message: "URL param TOKEN is missing",
+			Message: "Bearer TOKEN is missing",
 			Status:  401,
 		}
 
@@ -37,15 +43,12 @@ func DecodeAuthRequest(ctx context.Context, r *http.Request) (interface{}, error
 		return nil, fmt.Errorf("%s", resp)
 	}
 
-	// Query()["key"] will return an array of items,
-	// we only want the single item.
-	key := keys[0]
-
-	s := SetRequest{
-		Token: key,
+	s := AuthRequest{
+		Token:          token,
+		FirstPlaylist:  firstPlaylist,
+		SecondPlaylist: secondPlaylist,
 	}
 
-	fmt.Println(s)
 	return s, nil
 }
 

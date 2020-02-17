@@ -33,7 +33,8 @@ type Client struct {
 // This is a microservices architecture
 type Service interface {
 	Authenticate() (*AuthenticationResponse, error)
-	Intersect(token string) (*TrackResponse, error)
+	Playlists(token string) (*TrackResponse, error)
+	Intersect(token string, firstPlaylist string, secondPlaylist string) (*TrackResponse, error)
 }
 
 // AuthenticationResponse is the response struct from Spotify
@@ -45,7 +46,22 @@ type AuthenticationResponse struct {
 }
 
 type TrackResponse struct {
-	Explicit bool `json:"explicit"`
+	Reference string     `json:"href"`
+	Items     []Playlist `json:"items"`
+}
+
+type PlaylistResponse struct {
+	Reference string   `json:"href"`
+	Items     []Tracks `json:"items"`
+}
+
+type Tracks struct {
+	Track Playlist `json:"track"`
+}
+
+type Playlist struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 var httpClient *http.Client = &http.Client{}
@@ -114,17 +130,16 @@ func (c Client) Authenticate() (*AuthenticationResponse, error) {
 	return &auth, err
 }
 
-// Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Intersect(token string) (*TrackResponse, error) {
-	uri := fmt.Sprintf("%s/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp", c.URL)
-
+// Playlists is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
+func (c Client) Playlists(token string) (*TrackResponse, error) {
+	uri := fmt.Sprintf("%s/v1/me/playlists", c.URL)
 	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
 
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Authorization", token)
 
 	res, err := httpClient.Do(req)
 
@@ -164,8 +179,139 @@ func (c Client) Intersect(token string) (*TrackResponse, error) {
 	err = json.Unmarshal(response, &trackResponse)
 
 	track := TrackResponse{
-		Explicit: trackResponse.Explicit,
+		Reference: trackResponse.Reference,
+		Items:     trackResponse.Items,
 	}
 
 	return &track, err
+}
+
+// Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
+func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist string) (*TrackResponse, error) {
+	uri := fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, firstPlaylist)
+	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
+
+	fmt.Println(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", token)
+
+	res, err := httpClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	response, err := ioutil.ReadAll(res.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		var errResponse transport.IntersectError
+		err = json.Unmarshal(response, &errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+
+		errResponse = transport.IntersectError{
+			Error: errResponse.Error,
+		}
+
+		resp, err := json.Marshal(errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("%s", resp)
+	}
+
+	var trackResponse PlaylistResponse
+	err = json.Unmarshal(response, &trackResponse)
+
+	first := PlaylistResponse{
+		Reference: trackResponse.Reference,
+		Items:     trackResponse.Items,
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Second Playlist Hit
+	uri = fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, secondPlaylist)
+	req, err = http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", token)
+
+	res, err = httpClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	response, err = ioutil.ReadAll(res.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		var errResponse transport.IntersectError
+		err = json.Unmarshal(response, &errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+
+		errResponse = transport.IntersectError{
+			Error: errResponse.Error,
+		}
+
+		resp, err := json.Marshal(errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("%s", resp)
+	}
+
+	var secondPlaylistResponse PlaylistResponse
+	err = json.Unmarshal(response, &secondPlaylistResponse)
+
+	second := PlaylistResponse{
+		Reference: secondPlaylistResponse.Reference,
+		Items:     secondPlaylistResponse.Items,
+	}
+
+	intersection := []Playlist{}
+	for _, firstItem := range first.Items {
+		for _, secondItem := range second.Items {
+			if firstItem.Track.ID == secondItem.Track.ID {
+				playlist := Playlist{
+					ID:   firstItem.Track.ID,
+					Name: firstItem.Track.Name,
+				}
+				intersection = append(intersection, playlist)
+			}
+		}
+	}
+
+	results := TrackResponse{
+		Reference: secondPlaylistResponse.Reference,
+		Items:     intersection,
+	}
+	return &results, err
 }

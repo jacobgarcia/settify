@@ -23,6 +23,7 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.9.1-0.20200207193231-b8803fe95dc4
+	github.com/zmb3/spotify v0.0.0-20200112163645-71a4c67d18db
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
 	golang.org/x/text v0.3.2

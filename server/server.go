@@ -19,29 +19,23 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorLogger(logger),
-		kithttp.ServerErrorEncoder(transport.ErrorEncoder),
-	}
-
-	getAuthHandler := kithttp.NewServer(
-		authEndpoint(s, logger),
-		transport.DecodeAuthRequest,
-		transport.EncodeResponse,
-		opts...,
-	)
-
-	opts = []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
 		kithttp.ServerErrorEncoder(transport.IntersectErrorEncoder),
 	}
 
-	getIntersectHandler := kithttp.NewServer(
+	playlistsHandler := kithttp.NewServer(
+		playlistsEndpoint(s, logger),
+		transport.DecodeAuthRequest,
+		transport.EncodeResponse,
+		opts...)
+
+	intersectHandler := kithttp.NewServer(
 		intersectEndpoint(s, logger),
 		transport.DecodeAuthRequest,
 		transport.EncodeResponse,
 		opts...)
 
-	r.Handle("/authenticate", getAuthHandler).Methods("GET")
-	r.Handle("/intersect", getIntersectHandler).Methods("GET")
+	r.Handle("/playlists", playlistsHandler).Methods("GET")
+	r.Handle("/intersect", intersectHandler).Methods("GET")
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
@@ -49,9 +43,10 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 	return r
 }
 
-func authEndpoint(r spotify.Service, logger log.Logger) endpoint.Endpoint {
+func playlistsEndpoint(service spotify.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		auth, err := r.Authenticate()
+		req := request.(transport.AuthRequest)
+		auth, err := service.Playlists(req.Token)
 		if err != nil {
 			return auth, err
 		}
@@ -59,10 +54,10 @@ func authEndpoint(r spotify.Service, logger log.Logger) endpoint.Endpoint {
 	}
 }
 
-func intersectEndpoint(s spotify.Service, logger log.Logger) endpoint.Endpoint {
+func intersectEndpoint(service spotify.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(transport.SetRequest)
-		auth, err := s.Intersect(req.Token)
+		req := request.(transport.AuthRequest)
+		auth, err := service.Intersect(req.Token, req.FirstPlaylist, req.SecondPlaylist)
 		if err != nil {
 			return auth, err
 		}
