@@ -45,6 +45,7 @@ func main() {
 	}
 
 	glog.Info("Serving on port: ", port)
+
 	err = http.ListenAndServe(":"+port, router)
 	glog.Exitf("Server stopped: %s", err)
 }

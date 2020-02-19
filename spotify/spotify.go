@@ -32,107 +32,65 @@ type Client struct {
 // Service expose all endpoints as a services.
 // This is a microservices architecture
 type Service interface {
-	Authenticate() (*AuthenticationResponse, error)
-	Playlists(token string) (*TrackResponse, error)
-	Intersect(token string, firstPlaylist string, secondPlaylist string) (*TrackResponse, error)
+	Playlists(token string, offset string) (*Playlists, error)
+	Intersect(token string, firstPlaylist string, secondPlaylist string) (*Playlists, error)
 }
 
-// AuthenticationResponse is the response struct from Spotify
-type AuthenticationResponse struct {
-	Token      string `json:"access_token"`
-	Type       string `json:"token_type"`
-	Expiration int    `json:"expires_in"`
-	Scope      string `json:"scope"`
+// PlaylistsDecoder decodes the response object from Spotify for the playlists endpoint
+type PlaylistsDecoder struct {
+	Items []PlaylistDecoder `json:"items"`
+	Total int               `json:"total"`
 }
 
-type TrackResponse struct {
-	Reference string     `json:"href"`
-	Items     []Playlist `json:"items"`
+// PlaylistDecoder contains all the objects we want to decode from the items response from Spotify
+type PlaylistDecoder struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Owner  Owner  `json:"owner"`
+	Public bool   `json:"public"`
+	Tracks Tracks `json:"tracks"`
+}
+
+// Owner refers to the author of a playlist
+type Owner struct {
+	ID string `json:"id"`
+}
+
+// Tracks refers to tracks of a playlist
+type Tracks struct {
+	Total int `json:"total"`
+}
+
+// Playlists encodes the response object for the playlists endpoint
+type Playlists struct {
+	Items []Playlist `json:"items"`
+	Total int        `json:"total"`
+}
+
+// Playlist contains the response object for the playlists endpoint
+type Playlist struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Owner  string `json:"owner"`
+	Scope  string `json:"scope"`
+	Tracks int    `json:"tracks"`
 }
 
 type PlaylistResponse struct {
-	Reference string   `json:"href"`
-	Items     []Tracks `json:"items"`
+	Reference string  `json:"href"`
+	Items     []Track `json:"items"`
 }
 
-type Tracks struct {
+type Track struct {
 	Track Playlist `json:"track"`
-}
-
-type Playlist struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
 }
 
 var httpClient *http.Client = &http.Client{}
 var data url.Values = url.Values{}
 
-// Authenticate is the method for authentication and getting a valid Spotify token
-func (c Client) Authenticate() (*AuthenticationResponse, error) {
-	uri := fmt.Sprintf("%s/api/token", c.authURL)
-
-	data.Set("grant_type", "client_credentials")
-
-	req, err := http.NewRequest("POST", uri, bytes.NewBufferString(data.Encode()))
-
-	if err != nil {
-		return nil, err
-	}
-
-	req.SetBasicAuth(c.id, c.secret)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := httpClient.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	response, err := ioutil.ReadAll(res.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		var errResponse transport.ErrorResponse
-		err = json.Unmarshal(response, &errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		errResponse = transport.ErrorResponse{
-			Message: errResponse.Message,
-			Status:  res.StatusCode,
-		}
-
-		resp, err := json.Marshal(errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("%s", resp)
-	}
-
-	var authResponse AuthenticationResponse
-	err = json.Unmarshal(response, &authResponse)
-
-	auth := AuthenticationResponse{
-		Token:      authResponse.Token,
-		Type:       authResponse.Type,
-		Expiration: authResponse.Expiration,
-		Scope:      authResponse.Scope,
-	}
-
-	return &auth, err
-}
-
 // Playlists is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Playlists(token string) (*TrackResponse, error) {
-	uri := fmt.Sprintf("%s/v1/me/playlists", c.URL)
+func (c Client) Playlists(token string, offset string) (*Playlists, error) {
+	uri := fmt.Sprintf("%s/v1/me/playlists?offset=%s", c.URL, offset)
 	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
 
 	if err != nil {
@@ -175,19 +133,35 @@ func (c Client) Playlists(token string) (*TrackResponse, error) {
 		return nil, fmt.Errorf("%s", resp)
 	}
 
-	var trackResponse TrackResponse
-	err = json.Unmarshal(response, &trackResponse)
+	var playslistsDecoder PlaylistsDecoder
+	err = json.Unmarshal(response, &playslistsDecoder)
 
-	track := TrackResponse{
-		Reference: trackResponse.Reference,
-		Items:     trackResponse.Items,
+	var playlists []Playlist
+	for _, playlist := range playslistsDecoder.Items {
+		scope := "public"
+		if !playlist.Public {
+			scope = "private"
+		}
+		newPlaylist := Playlist{
+			ID:     playlist.ID,
+			Name:   playlist.Name,
+			Owner:  playlist.Owner.ID,
+			Tracks: playlist.Tracks.Total,
+			Scope:  scope,
+		}
+		playlists = append(playlists, newPlaylist)
 	}
 
-	return &track, err
+	playlistsResponse := Playlists{
+		Items: playlists,
+		Total: playslistsDecoder.Total,
+	}
+
+	return &playlistsResponse, err
 }
 
 // Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist string) (*TrackResponse, error) {
+func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist string) (*Playlists, error) {
 	uri := fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, firstPlaylist)
 	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
 
@@ -309,9 +283,8 @@ func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist str
 		}
 	}
 
-	results := TrackResponse{
-		Reference: secondPlaylistResponse.Reference,
-		Items:     intersection,
+	results := Playlists{
+		Items: intersection,
 	}
 	return &results, err
 }

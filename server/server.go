@@ -6,6 +6,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 
@@ -40,13 +41,16 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
 
-	return r
+	return handlers.CORS(
+		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}),
+		handlers.AllowedOrigins([]string{"*"}))(r)
 }
 
 func playlistsEndpoint(service spotify.Service, logger log.Logger) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(transport.AuthRequest)
-		auth, err := service.Playlists(req.Token)
+		auth, err := service.Playlists(req.Token, req.Offset)
 		if err != nil {
 			return auth, err
 		}
