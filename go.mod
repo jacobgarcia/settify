@@ -3,6 +3,7 @@ module github.com/jacobgarcia/settify
 go 1.13
 
 require (
+	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-kit/kit v0.9.0

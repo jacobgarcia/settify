@@ -36,7 +36,7 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 		opts...)
 
 	r.Handle("/playlists", playlistsHandler).Methods("GET")
-	r.Handle("/intersect", intersectHandler).Methods("GET")
+	r.Handle("/intersection", intersectHandler).Methods("GET")
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
