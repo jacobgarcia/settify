@@ -373,6 +373,23 @@ func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist str
 		}
 	}
 
+	if len(intersection) == 0 {
+		nestedError := transport.NestedError{
+			Status:  204,
+			Message: "Playlists doesn't have anything in common",
+		}
+		errResponse := transport.IntersectError{
+			Error: nestedError,
+		}
+
+		resp, err := json.Marshal(errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s", resp)
+	}
+
 	results := Playlists{
 		Items: intersection,
 		Total: len(intersection),

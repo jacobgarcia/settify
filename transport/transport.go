@@ -106,12 +106,10 @@ func IntersectErrorEncoder(c context.Context, err error, w http.ResponseWriter) 
 	var errResponse IntersectError
 
 	err = json.Unmarshal([]byte(err.Error()), &errResponse)
-
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	msg := ErrorResponse{
 		Message: errResponse.Error.Message,
 	}
