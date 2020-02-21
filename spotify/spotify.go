@@ -23,6 +23,8 @@ func New(a, u, i, s string) *Client {
 	}
 }
 
+type method func(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error)
+
 // Client contains the required params to connect succesfully to Spotify API
 type Client struct {
 	authURL string
@@ -36,6 +38,7 @@ type Client struct {
 type Service interface {
 	Playlists(token string, offset string) (*Playlists, error)
 	Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
+	Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
 }
 
 // PlaylistsDecoder decodes the response object from Spotify for the playlists endpoint
@@ -243,8 +246,46 @@ func request(url string, path string, token string, dat interface{}) (*User, err
 	return &userResponse, nil
 }
 
+func intersect(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
+	// Then we traverse all elements and create the interesection
+	// We doing it this unoptimized way so we can compare it after this O(n*m)
+	intersection := []Playlist{}
+	for _, firstItem := range first.Items {
+		for _, secondItem := range second.Items {
+			if firstItem.Track.ID == secondItem.Track.ID {
+				playlist := Playlist{
+					ID:   firstItem.Track.ID,
+					Name: firstItem.Track.Name,
+					URI:  firstItem.Track.URI,
+				}
+				intersection = append(intersection, playlist)
+			}
+		}
+	}
+
+	return intersection, nil
+}
+
+func unify(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
+	tracksUnion := append(first.Items, second.Items...)
+	union := []Playlist{}
+	for _, item := range tracksUnion {
+		playlist := Playlist{
+			ID:   item.Track.ID,
+			Name: item.Track.Name,
+			URI:  item.Track.URI,
+		}
+		union = append(union, playlist)
+	}
+	return union, nil
+}
+
 // Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
 func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, c, intersect)
+}
+
+func operation(token string, firstPlaylist string, secondPlaylist string, c Client, fn method) (*NewPlaylistResponse, error) {
 	// First we need to retrieve the first playlist tracks
 	uri := fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, firstPlaylist)
 	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
@@ -357,23 +398,13 @@ func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist str
 		Items:     secondPlaylistResponse.Items,
 	}
 
-	// Then we traverse all elements and create the interesection
-	// We doing it this unoptimized way so we can compare it after this
-	intersection := []Playlist{}
-	for _, firstItem := range first.Items {
-		for _, secondItem := range second.Items {
-			if firstItem.Track.ID == secondItem.Track.ID {
-				playlist := Playlist{
-					ID:   firstItem.Track.ID,
-					Name: firstItem.Track.Name,
-					URI:  firstItem.Track.URI,
-				}
-				intersection = append(intersection, playlist)
-			}
-		}
+	// Get playlist with applied operation
+	op, err := fn(first, second)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(intersection) == 0 {
+	if len(op) == 0 {
 		nestedError := transport.NestedError{
 			Status:  204,
 			Message: "Playlists doesn't have anything in common",
@@ -391,8 +422,8 @@ func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist str
 	}
 
 	results := Playlists{
-		Items: intersection,
-		Total: len(intersection),
+		Items: op,
+		Total: len(op),
 	}
 
 	// Next, we need the user.id of the current session.
@@ -437,4 +468,9 @@ func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist str
 	}
 
 	return &newPlaylistResponse, err
+}
+
+// Union merges two playlist tracks into one
+func (c Client) Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, c, unify)
 }

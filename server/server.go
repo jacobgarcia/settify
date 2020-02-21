@@ -30,13 +30,20 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 		opts...)
 
 	intersectHandler := kithttp.NewServer(
-		intersectEndpoint(s, logger),
+		intersectEndpoint(s, logger, "intersection"),
+		transport.DecodeAuthRequest,
+		transport.EncodeResponse,
+		opts...)
+
+	unionHandler := kithttp.NewServer(
+		intersectEndpoint(s, logger, "union"),
 		transport.DecodeAuthRequest,
 		transport.EncodeResponse,
 		opts...)
 
 	r.Handle("/playlists", playlistsHandler).Methods("GET")
 	r.Handle("/intersection", intersectHandler).Methods("GET")
+	r.Handle("/union", unionHandler).Methods("GET")
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
@@ -58,10 +65,17 @@ func playlistsEndpoint(service spotify.Service, logger log.Logger) endpoint.Endp
 	}
 }
 
-func intersectEndpoint(service spotify.Service, logger log.Logger) endpoint.Endpoint {
+func intersectEndpoint(service spotify.Service, logger log.Logger, operation string) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(transport.AuthRequest)
-		auth, err := service.Intersect(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+		auth, err := &spotify.NewPlaylistResponse{}, nil
+
+		switch operation {
+		case "intersection":
+			auth, err = service.Intersect(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+		case "union":
+			auth, err = service.Union(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+		}
 		if err != nil {
 			return auth, err
 		}
