@@ -252,14 +252,18 @@ func intersect(first PlaylistResponse, second PlaylistResponse) ([]Playlist, err
 	intersection := []Playlist{}
 	for _, firstItem := range first.Items {
 		for _, secondItem := range second.Items {
-			if firstItem.Track.ID == secondItem.Track.ID {
-				playlist := Playlist{
-					ID:   firstItem.Track.ID,
-					Name: firstItem.Track.Name,
-					URI:  firstItem.Track.URI,
+
+			go func(firstItem Track, secondItem Track) {
+				if firstItem.Track.ID == secondItem.Track.ID {
+					playlist := Playlist{
+						ID:   firstItem.Track.ID,
+						Name: firstItem.Track.Name,
+						URI:  firstItem.Track.URI,
+					}
+					intersection = append(intersection, playlist)
 				}
-				intersection = append(intersection, playlist)
-			}
+			}(firstItem, secondItem)
+
 		}
 	}
 
