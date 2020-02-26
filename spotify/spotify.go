@@ -39,6 +39,12 @@ type Service interface {
 	Playlists(token string, offset string) (*Playlists, error)
 	Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
 	Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
+	Profile(token string) (*User, error)
+}
+
+// Image specify the profile image url of a user
+type Image struct {
+	URL string `json:"url"`
 }
 
 // PlaylistsDecoder decodes the response object from Spotify for the playlists endpoint
@@ -84,7 +90,10 @@ type Playlist struct {
 
 // User encodes/decodes the user id for Spotify
 type User struct {
-	ID string `json:"id"`
+	ID     string  `json:"id"`
+	Name   string  `json:"display_name",omitempty`
+	Email  string  `json:"email,omitempty"`
+	Images []Image `json:"images,omitempty"`
 }
 
 type PlaylistResponse struct {
@@ -240,7 +249,10 @@ func request(url string, path string, token string, dat interface{}) (*User, err
 	}
 
 	userResponse := User{
-		ID: user.ID,
+		ID:     user.ID,
+		Email:  user.Email,
+		Images: user.Images,
+		Name:   user.Name,
 	}
 
 	return &userResponse, nil
@@ -477,4 +489,16 @@ func operation(token string, firstPlaylist string, secondPlaylist string, c Clie
 // Union merges two playlist tracks into one
 func (c Client) Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
 	return operation(token, firstPlaylist, secondPlaylist, c, unify)
+}
+
+// Profile gets the user information
+func (c Client) Profile(token string) (*User, error) {
+	// Next, we need the user.id of the current session.
+	// This is a requirement to create the new playlist.
+	user, err := request(c.URL, "v1/me", token, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

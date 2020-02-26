@@ -14,36 +14,25 @@ import (
 	"github.com/jacobgarcia/settify/transport"
 )
 
+var logger log.Logger
+var service spotify.Service
+
 // CreateRouter is in charge to define all routes
-func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
+func CreateRouter(spotifyService spotify.Service, serverLogger log.Logger) http.Handler {
+	// Set the logger we will be using in the server
+	logger = serverLogger
+	service = spotifyService
 	r := mux.NewRouter()
 
-	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
-		kithttp.ServerErrorEncoder(transport.IntersectErrorEncoder),
-	}
-
-	playlistsHandler := kithttp.NewServer(
-		playlistsEndpoint(s, logger),
-		transport.DecodeAuthRequest,
-		transport.EncodeResponse,
-		opts...)
-
-	intersectHandler := kithttp.NewServer(
-		intersectEndpoint(s, logger, "intersection"),
-		transport.DecodeAuthRequest,
-		transport.EncodeResponse,
-		opts...)
-
-	unionHandler := kithttp.NewServer(
-		intersectEndpoint(s, logger, "union"),
-		transport.DecodeAuthRequest,
-		transport.EncodeResponse,
-		opts...)
+	playlistsHandler := getHandler(playlistsEndpoint())
+	intersectHandler := getHandler(operationEndpoint("intersection"))
+	unionHandler := getHandler(operationEndpoint("union"))
+	profileHandler := getHandler(profileEndpoint())
 
 	r.Handle("/playlists", playlistsHandler).Methods("GET")
 	r.Handle("/intersection", intersectHandler).Methods("GET")
 	r.Handle("/union", unionHandler).Methods("GET")
+	r.Handle("/me", profileHandler).Methods("GET")
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
@@ -54,18 +43,29 @@ func CreateRouter(s spotify.Service, logger log.Logger) http.Handler {
 		handlers.AllowedOrigins([]string{"*"}))(r)
 }
 
-func playlistsEndpoint(service spotify.Service, logger log.Logger) endpoint.Endpoint {
+func playlistsEndpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(transport.AuthRequest)
 		auth, err := service.Playlists(req.Token, req.Offset)
 		if err != nil {
-			return auth, err
+			return nil, err
 		}
-		return auth, err
+		return auth, nil
 	}
 }
 
-func intersectEndpoint(service spotify.Service, logger log.Logger, operation string) endpoint.Endpoint {
+func profileEndpoint() endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(transport.AuthRequest)
+		auth, err := service.Profile(req.Token)
+		if err != nil {
+			return nil, err
+		}
+		return auth, nil
+	}
+}
+
+func operationEndpoint(operation string) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(transport.AuthRequest)
 		auth, err := &spotify.NewPlaylistResponse{}, nil
@@ -81,4 +81,17 @@ func intersectEndpoint(service spotify.Service, logger log.Logger, operation str
 		}
 		return auth, err
 	}
+}
+
+func getHandler(endpoint endpoint.Endpoint) *kithttp.Server {
+	opts := []kithttp.ServerOption{
+		kithttp.ServerErrorLogger(logger),
+		kithttp.ServerErrorEncoder(transport.IntersectErrorEncoder),
+	}
+
+	return kithttp.NewServer(
+		endpoint,
+		transport.DecodeAuthRequest,
+		transport.EncodeResponse,
+		opts...)
 }
