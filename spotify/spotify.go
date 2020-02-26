@@ -36,10 +36,11 @@ type Client struct {
 // Service expose all endpoints as a services.
 // This is a microservices architecture
 type Service interface {
+	Profile(token string) (*User, error)
 	Playlists(token string, offset string) (*Playlists, error)
 	Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
 	Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
-	Profile(token string) (*User, error)
+	Complement(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
 }
 
 // Image specify the profile image url of a user
@@ -282,6 +283,37 @@ func intersect(first PlaylistResponse, second PlaylistResponse) ([]Playlist, err
 	return intersection, nil
 }
 
+func complement(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
+	// Then we traverse all elements and create the interesection
+	// We doing it this unoptimized way so we can compare it after this O(n*m)
+	complement := []Playlist{}
+	// First we need to calculate the intersection, then remove it from B
+	for _, firstItem := range first.Items {
+		for index, secondItem := range second.Items {
+
+			go func(firstItem Track, secondItem Track, index int) {
+				if firstItem.Track.ID == secondItem.Track.ID {
+					// Remove the element at index i from a.
+					second.Items[index] = second.Items[len(second.Items)-1] // Copy last element to index i.
+					second.Items[len(second.Items)-1] = Track{}             // Erase last element (write zero value).
+					second.Items = second.Items[:len(second.Items)-1]       // Truncate slice.
+				}
+			}(firstItem, secondItem, index)
+		}
+	}
+
+	for _, item := range second.Items {
+		playlist := Playlist{
+			ID:   item.Track.ID,
+			Name: item.Track.Name,
+			URI:  item.Track.URI,
+		}
+		complement = append(complement, playlist)
+	}
+
+	return complement, nil
+}
+
 func unify(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
 	tracksUnion := append(first.Items, second.Items...)
 	union := []Playlist{}
@@ -486,11 +518,6 @@ func operation(token string, firstPlaylist string, secondPlaylist string, c Clie
 	return &newPlaylistResponse, err
 }
 
-// Union merges two playlist tracks into one
-func (c Client) Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, unify)
-}
-
 // Profile gets the user information
 func (c Client) Profile(token string) (*User, error) {
 	// Next, we need the user.id of the current session.
@@ -501,4 +528,14 @@ func (c Client) Profile(token string) (*User, error) {
 	}
 
 	return user, nil
+}
+
+// Union merges two playlist tracks into one
+func (c Client) Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, c, unify)
+}
+
+// Complement creates a playlist containing all elements that are not in A
+func (c Client) Complement(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, c, complement)
 }

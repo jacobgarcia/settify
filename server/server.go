@@ -28,11 +28,15 @@ func CreateRouter(spotifyService spotify.Service, serverLogger log.Logger) http.
 	intersectHandler := getHandler(operationEndpoint("intersection"))
 	unionHandler := getHandler(operationEndpoint("union"))
 	profileHandler := getHandler(profileEndpoint())
+	complementHandler := getHandler(operationEndpoint("complement"))
 
+	// Basic Spotify calls
+	r.Handle("/me", profileHandler).Methods("GET")
 	r.Handle("/playlists", playlistsHandler).Methods("GET")
+	// Set operations
 	r.Handle("/intersection", intersectHandler).Methods("GET")
 	r.Handle("/union", unionHandler).Methods("GET")
-	r.Handle("/me", profileHandler).Methods("GET")
+	r.Handle("/complement", complementHandler).Methods("GET")
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
@@ -75,6 +79,8 @@ func operationEndpoint(operation string) endpoint.Endpoint {
 			auth, err = service.Intersect(req.Token, req.FirstPlaylist, req.SecondPlaylist)
 		case "union":
 			auth, err = service.Union(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+		case "complement":
+			auth, err = service.Complement(req.Token, req.FirstPlaylist, req.SecondPlaylist)
 		}
 		if err != nil {
 			return auth, err
