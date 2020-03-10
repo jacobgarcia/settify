@@ -43,7 +43,7 @@ type Service interface {
 	Complement(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
 }
 
-// Image specify the profile image url of a user
+// Image specifies image urls of an object
 type Image struct {
 	URL string `json:"url"`
 }
@@ -56,11 +56,12 @@ type PlaylistsDecoder struct {
 
 // PlaylistDecoder contains all the objects we want to decode from the items response from Spotify
 type PlaylistDecoder struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Owner  Owner  `json:"owner"`
-	Public bool   `json:"public"`
-	Tracks Tracks `json:"tracks"`
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Owner  Owner   `json:"owner"`
+	Public bool    `json:"public"`
+	Tracks Tracks  `json:"tracks"`
+	Images []Image `json:"images"`
 }
 
 // Owner refers to the author of a playlist
@@ -87,12 +88,13 @@ type Playlist struct {
 	Scope  string `json:"scope,omitempty"`
 	Tracks int    `json:"tracks,omitempty"`
 	URI    string `json:"uri,omitempty"`
+	Image  Image  `json:"image,omitempty"`
 }
 
 // User encodes/decodes the user id for Spotify
 type User struct {
 	ID     string  `json:"id"`
-	Name   string  `json:"display_name",omitempty`
+	Name   string  `json:"display_name,omitempty"`
 	Email  string  `json:"email,omitempty"`
 	Images []Image `json:"images,omitempty"`
 }
@@ -116,7 +118,7 @@ type NewPlaylistResponse struct {
 var httpClient *http.Client = &http.Client{}
 var data url.Values = url.Values{}
 
-// Playlists is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
+// Playlists retrieves the playlists from the user
 func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 	uri := fmt.Sprintf("%s/v1/me/playlists?offset=%s", c.URL, offset)
 	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
@@ -170,12 +172,15 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 		if !playlist.Public {
 			scope = "private"
 		}
+
+		fmt.Println(playlist.Images)
 		newPlaylist := Playlist{
 			ID:     playlist.ID,
 			Name:   playlist.Name,
 			Owner:  playlist.Owner.ID,
 			Tracks: playlist.Tracks.Total,
 			Scope:  scope,
+			Image:  playlist.Images[len(playlist.Images)-1],
 		}
 		playlists = append(playlists, newPlaylist)
 	}
