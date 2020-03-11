@@ -88,7 +88,7 @@ type Playlist struct {
 	Scope  string `json:"scope,omitempty"`
 	Tracks int    `json:"tracks,omitempty"`
 	URI    string `json:"uri,omitempty"`
-	Image  Image  `json:"image,omitempty"`
+	Image  string `json:"image,omitempty"`
 }
 
 // User encodes/decodes the user id for Spotify
@@ -172,15 +172,13 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 		if !playlist.Public {
 			scope = "private"
 		}
-
-		fmt.Println(playlist.Images)
 		newPlaylist := Playlist{
 			ID:     playlist.ID,
 			Name:   playlist.Name,
 			Owner:  playlist.Owner.ID,
 			Tracks: playlist.Tracks.Total,
 			Scope:  scope,
-			Image:  playlist.Images[len(playlist.Images)-1],
+			Image:  playlist.Images[len(playlist.Images)-1].URL,
 		}
 		playlists = append(playlists, newPlaylist)
 	}
@@ -491,6 +489,8 @@ func operation(token string, firstPlaylist string, secondPlaylist string, c Clie
 	newPlaylist := Playlist{
 		Name: name,
 	}
+
+	fmt.Printf("%+v\n", newPlaylist)
 	uri = fmt.Sprintf("v1/users/%s/playlists", user.ID)
 	playlist, err := request(c.URL, uri, token, newPlaylist)
 	if err != nil {
