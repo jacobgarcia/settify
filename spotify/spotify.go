@@ -178,7 +178,7 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 			Owner:  playlist.Owner.ID,
 			Tracks: playlist.Tracks.Total,
 			Scope:  scope,
-			Image:  playlist.Images[len(playlist.Images)-1].URL,
+			Image:  playlist.Images[0].URL,
 		}
 		playlists = append(playlists, newPlaylist)
 	}
