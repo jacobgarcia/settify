@@ -166,11 +166,20 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 	var playslistsDecoder PlaylistsDecoder
 	err = json.Unmarshal(response, &playslistsDecoder)
 
+	if err != nil {
+		return nil, err
+	}
+
 	var playlists []Playlist
 	for _, playlist := range playslistsDecoder.Items {
 		scope := "public"
 		if !playlist.Public {
 			scope = "private"
+		}
+
+		image := "https://www.soundtrack.net/img/album/noart.jpg"
+		if len(playlist.Images) > 0 {
+			image = playlist.Images[0].URL
 		}
 		newPlaylist := Playlist{
 			ID:     playlist.ID,
@@ -178,7 +187,7 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 			Owner:  playlist.Owner.ID,
 			Tracks: playlist.Tracks.Total,
 			Scope:  scope,
-			Image:  playlist.Images[0].URL,
+			Image:  image,
 		}
 		playlists = append(playlists, newPlaylist)
 	}
@@ -188,7 +197,7 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 		Total: playslistsDecoder.Total,
 	}
 
-	return &playlistsResponse, err
+	return &playlistsResponse, nil
 }
 
 func request(url string, path string, token string, dat interface{}) (*User, error) {
