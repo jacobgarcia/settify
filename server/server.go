@@ -76,11 +76,11 @@ func operationEndpoint(operation string) endpoint.Endpoint {
 
 		switch operation {
 		case "intersection":
-			auth, err = service.Intersect(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+			auth, err = service.Intersect(req.Token, req.FirstPlaylist, req.SecondPlaylist, req.Name)
 		case "union":
-			auth, err = service.Union(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+			auth, err = service.Union(req.Token, req.FirstPlaylist, req.SecondPlaylist, req.Name)
 		case "complement":
-			auth, err = service.Complement(req.Token, req.FirstPlaylist, req.SecondPlaylist)
+			auth, err = service.Complement(req.Token, req.FirstPlaylist, req.SecondPlaylist, req.Name)
 		}
 		if err != nil {
 			return auth, err

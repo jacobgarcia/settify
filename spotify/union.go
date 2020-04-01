@@ -15,6 +15,6 @@ func unify(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) 
 }
 
 // Union merges two playlist tracks into one
-func (c Client) Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, unify)
+func (c Client) Union(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, name, c, unify)
 }

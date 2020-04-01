@@ -25,6 +25,6 @@ func intersect(first PlaylistResponse, second PlaylistResponse) ([]Playlist, err
 }
 
 // Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, intersect)
+func (c Client) Intersect(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, name, c, intersect)
 }

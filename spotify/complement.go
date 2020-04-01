@@ -32,6 +32,6 @@ func complement(first PlaylistResponse, second PlaylistResponse) ([]Playlist, er
 }
 
 // Complement creates a playlist containing all elements that are not in A
-func (c Client) Complement(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, complement)
+func (c Client) Complement(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error) {
+	return operation(token, firstPlaylist, secondPlaylist, name, c, complement)
 }

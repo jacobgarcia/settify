@@ -11,7 +11,7 @@ import (
 	"github.com/jacobgarcia/settify/transport"
 )
 
-func operation(token string, firstPlaylist string, secondPlaylist string, c Client, fn method) (*NewPlaylistResponse, error) {
+func operation(token, firstPlaylist, secondPlaylist, name string, c Client, fn method) (*NewPlaylistResponse, error) {
 	// First we need to retrieve the first playlist tracks
 	uri := fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, firstPlaylist)
 	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
@@ -159,8 +159,12 @@ func operation(token string, firstPlaylist string, secondPlaylist string, c Clie
 		return nil, err
 	}
 
-	// Next, we create the empty playlist with a new random name
-	name := randomdata.SillyName()
+	// Next, we create the empty playlist with the specified name, if the name is empty, just generate a random name
+	fmt.Println(name)
+	if name == "" {
+		name = randomdata.SillyName()
+	}
+
 	newPlaylist := Playlist{
 		Name: name,
 	}

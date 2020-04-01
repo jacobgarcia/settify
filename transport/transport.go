@@ -13,6 +13,7 @@ type AuthRequest struct {
 	FirstPlaylist  string
 	SecondPlaylist string
 	Offset         string
+	Name           string
 }
 
 // DecodeAuthRequest serves as a middleware function to intercept requests in order to get the Authorization Bearer Token
@@ -22,6 +23,7 @@ func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, err
 	offset := req.URL.Query().Get("offset")
 	firstPlaylist := req.URL.Query().Get("firstPlaylist")
 	secondPlaylist := req.URL.Query().Get("secondPlaylist")
+	name := req.URL.Query().Get("name")
 
 	if token == "" {
 		fmt.Println("Token is missing")
@@ -51,11 +53,13 @@ func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, err
 		FirstPlaylist:  firstPlaylist,
 		SecondPlaylist: secondPlaylist,
 		Offset:         offset,
+		Name:           name,
 	}
 
 	return s, nil
 }
 
+// EncodeResponse creates the standard response object
 func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	return json.NewEncoder(w).Encode(response)

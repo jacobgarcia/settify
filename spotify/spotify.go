@@ -37,9 +37,9 @@ type Client struct {
 type Service interface {
 	Profile(token string) (*User, error)
 	Playlists(token string, offset string) (*Playlists, error)
-	Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
-	Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
-	Complement(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error)
+	Intersect(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
+	Union(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
+	Complement(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
 }
 
 // Image specifies image urls of an object
