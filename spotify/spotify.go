@@ -9,8 +9,6 @@ import (
 	"net/url"
 
 	"github.com/jacobgarcia/settify/transport"
-
-	"github.com/Pallinder/go-randomdata"
 )
 
 // New instatiates a new API client for Spotify
@@ -23,6 +21,7 @@ func New(a, u, i, s string) *Client {
 	}
 }
 
+// method is a custom type abstrction in order to pass functions as parameters
 type method func(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error)
 
 // Client contains the required params to connect succesfully to Spotify API
@@ -33,8 +32,8 @@ type Client struct {
 	secret  string
 }
 
-// Service expose all endpoints as a services.
-// This is a microservices architecture
+// Service expose all endpoints as services
+// This is a microservices architecture pattern
 type Service interface {
 	Profile(token string) (*User, error)
 	Playlists(token string, offset string) (*Playlists, error)
@@ -99,11 +98,13 @@ type User struct {
 	Images []Image `json:"images,omitempty"`
 }
 
+// PlaylistResponse contains the format for the response object
 type PlaylistResponse struct {
 	Reference string  `json:"href"`
 	Items     []Track `json:"items"`
 }
 
+// Track is abstraction for playlist contained as track in the json from the Spotify API
 type Track struct {
 	Track Playlist `json:"track"`
 }
@@ -269,287 +270,4 @@ func request(url string, path string, token string, dat interface{}) (*User, err
 	}
 
 	return &userResponse, nil
-}
-
-func intersect(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
-	// Then we traverse all elements and create the interesection
-	// We doing it this unoptimized way so we can compare it after this O(n*m)
-	intersection := []Playlist{}
-	for _, firstItem := range first.Items {
-		for _, secondItem := range second.Items {
-
-			go func(firstItem Track, secondItem Track) {
-				if firstItem.Track.ID == secondItem.Track.ID {
-					playlist := Playlist{
-						ID:   firstItem.Track.ID,
-						Name: firstItem.Track.Name,
-						URI:  firstItem.Track.URI,
-					}
-					intersection = append(intersection, playlist)
-				}
-			}(firstItem, secondItem)
-
-		}
-	}
-
-	return intersection, nil
-}
-
-func complement(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
-	// Then we traverse all elements and create the interesection
-	// We doing it this unoptimized way so we can compare it after this O(n*m)
-	complement := []Playlist{}
-	// First we need to calculate the intersection, then remove it from B
-	for _, firstItem := range first.Items {
-		for index, secondItem := range second.Items {
-
-			go func(firstItem Track, secondItem Track, index int) {
-				if firstItem.Track.ID == secondItem.Track.ID {
-					// Remove the element at index i from a.
-					second.Items[index] = second.Items[len(second.Items)-1] // Copy last element to index i.
-					second.Items[len(second.Items)-1] = Track{}             // Erase last element (write zero value).
-					second.Items = second.Items[:len(second.Items)-1]       // Truncate slice.
-				}
-			}(firstItem, secondItem, index)
-		}
-	}
-
-	for _, item := range second.Items {
-		playlist := Playlist{
-			ID:   item.Track.ID,
-			Name: item.Track.Name,
-			URI:  item.Track.URI,
-		}
-		complement = append(complement, playlist)
-	}
-
-	return complement, nil
-}
-
-func unify(first PlaylistResponse, second PlaylistResponse) ([]Playlist, error) {
-	tracksUnion := append(first.Items, second.Items...)
-	union := []Playlist{}
-	for _, item := range tracksUnion {
-		playlist := Playlist{
-			ID:   item.Track.ID,
-			Name: item.Track.Name,
-			URI:  item.Track.URI,
-		}
-		union = append(union, playlist)
-	}
-	return union, nil
-}
-
-// Intersect is the first method will be implementing in Settify. Basically takes two playlists, and generates a new playlist containing the interesection between them.
-func (c Client) Intersect(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, intersect)
-}
-
-func operation(token string, firstPlaylist string, secondPlaylist string, c Client, fn method) (*NewPlaylistResponse, error) {
-	// First we need to retrieve the first playlist tracks
-	uri := fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, firstPlaylist)
-	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
-
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-
-	res, err := httpClient.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	response, err := ioutil.ReadAll(res.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		var errResponse transport.IntersectError
-		err = json.Unmarshal(response, &errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		errResponse = transport.IntersectError{
-			Error: errResponse.Error,
-		}
-
-		resp, err := json.Marshal(errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("%s", resp)
-	}
-
-	var trackResponse PlaylistResponse
-	err = json.Unmarshal(response, &trackResponse)
-
-	first := PlaylistResponse{
-		Reference: trackResponse.Reference,
-		Items:     trackResponse.Items,
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Now we need to second playlist
-	uri = fmt.Sprintf("%s/v1/playlists/%s/tracks", c.URL, secondPlaylist)
-	req, err = http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
-
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-
-	res, err = httpClient.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	response, err = ioutil.ReadAll(res.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		var errResponse transport.IntersectError
-		err = json.Unmarshal(response, &errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		errResponse = transport.IntersectError{
-			Error: errResponse.Error,
-		}
-
-		resp, err := json.Marshal(errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("%s", resp)
-	}
-
-	var secondPlaylistResponse PlaylistResponse
-	err = json.Unmarshal(response, &secondPlaylistResponse)
-
-	if err != nil {
-		return nil, err
-	}
-
-	second := PlaylistResponse{
-		Reference: secondPlaylistResponse.Reference,
-		Items:     secondPlaylistResponse.Items,
-	}
-
-	// Get playlist with applied operation
-	op, err := fn(first, second)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(op) == 0 {
-		nestedError := transport.NestedError{
-			Status:  204,
-			Message: "Playlists doesn't have anything in common",
-		}
-		errResponse := transport.IntersectError{
-			Error: nestedError,
-		}
-
-		resp, err := json.Marshal(errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("%s", resp)
-	}
-
-	results := Playlists{
-		Items: op,
-		Total: len(op),
-	}
-
-	// Next, we need the user.id of the current session.
-	// This is a requirement to create the new playlist.
-	user, err := request(c.URL, "v1/me", token, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Next, we create the empty playlist with a new random name
-	name := randomdata.SillyName()
-	newPlaylist := Playlist{
-		Name: name,
-	}
-
-	fmt.Printf("%+v\n", newPlaylist)
-	uri = fmt.Sprintf("v1/users/%s/playlists", user.ID)
-	playlist, err := request(c.URL, uri, token, newPlaylist)
-	if err != nil {
-		return nil, err
-	}
-
-	// Finally, we need to add the tracks to the playlist
-	// Create an slice containing the tracks
-	tracks := []string{}
-	for _, item := range results.Items {
-		tracks = append(tracks, item.URI)
-	}
-	uri = fmt.Sprintf("v1/playlists/%s/tracks", playlist.ID)
-	jsonTracks := map[string][]string{
-		"uris": tracks,
-	}
-	_, err = request(c.URL, uri, token, jsonTracks)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// At the end, we just create a new response object containing the information we need
-	newPlaylistResponse := NewPlaylistResponse{
-		Name:   name,
-		Href:   playlist.ID,
-		Tracks: len(tracks),
-	}
-
-	return &newPlaylistResponse, err
-}
-
-// Profile gets the user information
-func (c Client) Profile(token string) (*User, error) {
-	// Next, we need the user.id of the current session.
-	// This is a requirement to create the new playlist.
-	user, err := request(c.URL, "v1/me", token, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-// Union merges two playlist tracks into one
-func (c Client) Union(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, unify)
-}
-
-// Complement creates a playlist containing all elements that are not in A
-func (c Client) Complement(token string, firstPlaylist string, secondPlaylist string) (*NewPlaylistResponse, error) {
-	return operation(token, firstPlaylist, secondPlaylist, c, complement)
 }
