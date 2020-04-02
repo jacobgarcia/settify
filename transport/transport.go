@@ -14,6 +14,7 @@ type AuthRequest struct {
 	SecondPlaylist string
 	Offset         string
 	Name           string
+	Username       string
 }
 
 // DecodeAuthRequest serves as a middleware function to intercept requests in order to get the Authorization Bearer Token
@@ -24,6 +25,7 @@ func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, err
 	firstPlaylist := req.URL.Query().Get("firstPlaylist")
 	secondPlaylist := req.URL.Query().Get("secondPlaylist")
 	name := req.URL.Query().Get("name")
+	username := req.URL.Query().Get("username")
 
 	if token == "" {
 		fmt.Println("Token is missing")
@@ -54,6 +56,7 @@ func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, err
 		SecondPlaylist: secondPlaylist,
 		Offset:         offset,
 		Name:           name,
+		Username:       username,
 	}
 
 	return s, nil

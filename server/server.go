@@ -29,10 +29,12 @@ func CreateRouter(spotifyService spotify.Service, serverLogger log.Logger) http.
 	unionHandler := getHandler(operationEndpoint("union"))
 	profileHandler := getHandler(profileEndpoint())
 	complementHandler := getHandler(operationEndpoint("complement"))
+	userPlaylistsHandler := getHandler(usersEndpoint())
 
 	// Basic Spotify calls
 	r.Handle("/me", profileHandler).Methods("GET")
 	r.Handle("/playlists", playlistsHandler).Methods("GET")
+	r.Handle("/user/playlists", userPlaylistsHandler).Methods("GET")
 	// Set operations
 	r.Handle("/intersection", intersectHandler).Methods("GET")
 	r.Handle("/union", unionHandler).Methods("GET")
@@ -62,6 +64,17 @@ func profileEndpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(transport.AuthRequest)
 		auth, err := service.Profile(req.Token)
+		if err != nil {
+			return nil, err
+		}
+		return auth, nil
+	}
+}
+
+func usersEndpoint() endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(transport.AuthRequest)
+		auth, err := service.UserPlaylists(req.Token, req.Offset, req.Username)
 		if err != nil {
 			return nil, err
 		}

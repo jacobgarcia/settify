@@ -35,6 +35,7 @@ type Client struct {
 // Service expose all endpoints as services
 // This is a microservices architecture pattern
 type Service interface {
+	UserPlaylists(token, offset, username string) (*Playlists, error)
 	Profile(token string) (*User, error)
 	Playlists(token string, offset string) (*Playlists, error)
 	Intersect(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
@@ -121,84 +122,13 @@ var data url.Values = url.Values{}
 
 // Playlists retrieves the playlists from the user
 func (c Client) Playlists(token string, offset string) (*Playlists, error) {
-	uri := fmt.Sprintf("%s/v1/me/playlists?offset=%s", c.URL, offset)
-	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
+	return getPlaylists(token, offset, "me", c)
+}
 
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", token)
-
-	res, err := httpClient.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	response, err := ioutil.ReadAll(res.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		var errResponse transport.IntersectError
-		err = json.Unmarshal(response, &errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		errResponse = transport.IntersectError{
-			Error: errResponse.Error,
-		}
-
-		resp, err := json.Marshal(errResponse)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("%s", resp)
-	}
-
-	var playslistsDecoder PlaylistsDecoder
-	err = json.Unmarshal(response, &playslistsDecoder)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var playlists []Playlist
-	for _, playlist := range playslistsDecoder.Items {
-		scope := "public"
-		if !playlist.Public {
-			scope = "private"
-		}
-
-		image := "https://www.soundtrack.net/img/album/noart.jpg"
-		if len(playlist.Images) > 0 {
-			image = playlist.Images[0].URL
-		}
-		newPlaylist := Playlist{
-			ID:     playlist.ID,
-			Name:   playlist.Name,
-			Owner:  playlist.Owner.ID,
-			Tracks: playlist.Tracks.Total,
-			Scope:  scope,
-			Image:  image,
-		}
-		playlists = append(playlists, newPlaylist)
-	}
-
-	playlistsResponse := Playlists{
-		Items: playlists,
-		Total: playslistsDecoder.Total,
-	}
-
-	return &playlistsResponse, nil
+// UserPlaylists retrieves the playlists from the user
+func (c Client) UserPlaylists(token, offset, username string) (*Playlists, error) {
+	username = fmt.Sprintf("users/%s", username)
+	return getPlaylists(token, offset, username, c)
 }
 
 func request(url string, path string, token string, dat interface{}) (*User, error) {

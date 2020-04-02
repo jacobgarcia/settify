@@ -201,3 +201,84 @@ func operation(token, firstPlaylist, secondPlaylist, name string, c Client, fn m
 
 	return &newPlaylistResponse, err
 }
+
+func getPlaylists(token, offset, path string, c Client) (*Playlists, error) {
+	uri := fmt.Sprintf("%s/v1/%s/playlists?offset=%s", c.URL, path, offset)
+	req, err := http.NewRequest("GET", uri, bytes.NewBufferString(data.Encode()))
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", token)
+
+	res, err := httpClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	response, err := ioutil.ReadAll(res.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		var errResponse transport.IntersectError
+		err = json.Unmarshal(response, &errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+
+		errResponse = transport.IntersectError{
+			Error: errResponse.Error,
+		}
+
+		resp, err := json.Marshal(errResponse)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("%s", resp)
+	}
+
+	var playslistsDecoder PlaylistsDecoder
+	err = json.Unmarshal(response, &playslistsDecoder)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var playlists []Playlist
+	for _, playlist := range playslistsDecoder.Items {
+		scope := "public"
+		if !playlist.Public {
+			scope = "private"
+		}
+
+		image := "https://www.soundtrack.net/img/album/noart.jpg"
+		if len(playlist.Images) > 0 {
+			image = playlist.Images[0].URL
+		}
+		newPlaylist := Playlist{
+			ID:     playlist.ID,
+			Name:   playlist.Name,
+			Owner:  playlist.Owner.ID,
+			Tracks: playlist.Tracks.Total,
+			Scope:  scope,
+			Image:  image,
+		}
+		playlists = append(playlists, newPlaylist)
+	}
+
+	playlistsResponse := Playlists{
+		Items: playlists,
+		Total: playslistsDecoder.Total,
+	}
+
+	return &playlistsResponse, nil
+}
