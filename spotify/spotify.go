@@ -38,6 +38,7 @@ type Service interface {
 	UserPlaylists(token, offset, username string) (*Playlists, error)
 	Profile(token string) (*User, error)
 	Playlists(token string, offset string) (*Playlists, error)
+	Playlist(token, id string) (*Playlist, error)
 	Intersect(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
 	Union(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
 	Complement(token, firstPlaylist, secondPlaylist, name string) (*NewPlaylistResponse, error)
@@ -56,17 +57,25 @@ type PlaylistsDecoder struct {
 
 // PlaylistDecoder contains all the objects we want to decode from the items response from Spotify
 type PlaylistDecoder struct {
-	ID     string  `json:"id"`
-	Name   string  `json:"name"`
-	Owner  Owner   `json:"owner"`
-	Public bool    `json:"public"`
-	Tracks Tracks  `json:"tracks"`
-	Images []Image `json:"images"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Owner     Owner     `json:"owner"`
+	Public    bool      `json:"public"`
+	Tracks    Tracks    `json:"tracks"`
+	Images    []Image   `json:"images"`
+	Followers Followers `json:"followers,omitempty"`
 }
 
 // Owner refers to the author of a playlist
 type Owner struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
+	Name string `json:"display_name,omitempty"`
+}
+
+// Followers refers to the followers a playlist has
+type Followers struct {
+	URL   string `json:"href"`
+	Total int    `json:"total"`
 }
 
 // Tracks refers to tracks of a playlist
@@ -89,6 +98,7 @@ type Playlist struct {
 	Tracks int    `json:"tracks,omitempty"`
 	URI    string `json:"uri,omitempty"`
 	Image  string `json:"image,omitempty"`
+	Likes  int    `json:"likes"`
 }
 
 // User encodes/decodes the user id for Spotify
@@ -125,13 +135,18 @@ func (c Client) Playlists(token string, offset string) (*Playlists, error) {
 	return getPlaylists(token, offset, "me", c)
 }
 
+// Playlist gets information regarding a specified playlist
+func (c Client) Playlist(token, id string) (*Playlist, error) {
+	return getPlaylist(token, id, c)
+}
+
 // UserPlaylists retrieves the playlists from the user
 func (c Client) UserPlaylists(token, offset, username string) (*Playlists, error) {
 	username = fmt.Sprintf("users/%s", username)
 	return getPlaylists(token, offset, username, c)
 }
 
-func request(url string, path string, token string, dat interface{}) (*User, error) {
+func request(url, path, token string, dat interface{}) ([]byte, error) {
 	// The URL for the request
 	uri := fmt.Sprintf("%s/%s", url, path)
 	// Specify if the request its a GET or a POST
@@ -184,6 +199,16 @@ func request(url string, path string, token string, dat interface{}) (*User, err
 		return nil, fmt.Errorf("%s", resp)
 	}
 
+	return body, nil
+
+}
+
+func userRequest(url, path, token string, dat interface{}) (*User, error) {
+	// Make the request and get the response
+	body, err := request(url, path, token, dat)
+	if err != nil {
+		return nil, err
+	}
 	// Create the decoder object
 	var user User
 	// Decode the object
@@ -200,4 +225,46 @@ func request(url string, path string, token string, dat interface{}) (*User, err
 	}
 
 	return &userResponse, nil
+}
+
+func playlistRequest(url, path, token string) (*Playlist, error) {
+	// Make the request and get the response
+	body, err := request(url, path, token, nil)
+	if err != nil {
+		return nil, err
+	}
+	// Create the decoder object
+	var playlist PlaylistDecoder
+	// Decode the object
+	err = json.Unmarshal(body, &playlist)
+	if err != nil {
+		return nil, err
+	}
+
+	image := "https://www.soundtrack.net/img/album/noart.jpg"
+	if len(playlist.Images) > 0 {
+		image = playlist.Images[0].URL
+	}
+
+	fmt.Println(playlist.Followers.Total)
+
+	playlistResponse := Playlist{
+		ID:    playlist.ID,
+		Name:  playlist.Name,
+		Image: image,
+		Owner: playlist.Owner.Name,
+		Likes: playlist.Followers.Total,
+	}
+
+	return &playlistResponse, nil
+}
+
+func getPlaylist(token, id string, c Client) (*Playlist, error) {
+	url := fmt.Sprintf("v1/playlists/%s", id)
+	playlist, err := playlistRequest(c.URL, url, token)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(playlist)
+	return playlist, nil
 }

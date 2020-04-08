@@ -154,7 +154,7 @@ func operation(token, firstPlaylist, secondPlaylist, name string, c Client, fn m
 
 	// Next, we need the user.id of the current session.
 	// This is a requirement to create the new playlist.
-	user, err := request(c.URL, "v1/me", token, nil)
+	user, err := userRequest(c.URL, "v1/me", token, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func operation(token, firstPlaylist, secondPlaylist, name string, c Client, fn m
 
 	fmt.Printf("%+v\n", newPlaylist)
 	uri = fmt.Sprintf("v1/users/%s/playlists", user.ID)
-	playlist, err := request(c.URL, uri, token, newPlaylist)
+	playlist, err := userRequest(c.URL, uri, token, newPlaylist)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func operation(token, firstPlaylist, secondPlaylist, name string, c Client, fn m
 	jsonTracks := map[string][]string{
 		"uris": tracks,
 	}
-	_, err = request(c.URL, uri, token, jsonTracks)
+	_, err = userRequest(c.URL, uri, token, jsonTracks)
 
 	if err != nil {
 		return nil, err

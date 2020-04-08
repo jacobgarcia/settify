@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 // AuthRequest is an authenticated request containing token
@@ -15,6 +17,7 @@ type AuthRequest struct {
 	Offset         string
 	Name           string
 	Username       string
+	PlaylistID     string
 }
 
 // DecodeAuthRequest serves as a middleware function to intercept requests in order to get the Authorization Bearer Token
@@ -26,6 +29,9 @@ func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, err
 	secondPlaylist := req.URL.Query().Get("secondPlaylist")
 	name := req.URL.Query().Get("name")
 	username := req.URL.Query().Get("username")
+
+	vars := mux.Vars(req)
+	id := vars["id"]
 
 	if token == "" {
 		fmt.Println("Token is missing")
@@ -57,6 +63,7 @@ func DecodeAuthRequest(ctx context.Context, req *http.Request) (interface{}, err
 		Offset:         offset,
 		Name:           name,
 		Username:       username,
+		PlaylistID:     id,
 	}
 
 	return s, nil

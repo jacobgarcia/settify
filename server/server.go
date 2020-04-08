@@ -30,6 +30,7 @@ func CreateRouter(spotifyService spotify.Service, serverLogger log.Logger) http.
 	profileHandler := getHandler(profileEndpoint())
 	complementHandler := getHandler(operationEndpoint("complement"))
 	userPlaylistsHandler := getHandler(usersEndpoint())
+	playlistHandler := getHandler(playlistEndpoint())
 
 	// Basic Spotify calls
 	r.Handle("/me", profileHandler).Methods("GET")
@@ -39,6 +40,9 @@ func CreateRouter(spotifyService spotify.Service, serverLogger log.Logger) http.
 	r.Handle("/intersection", intersectHandler).Methods("GET")
 	r.Handle("/union", unionHandler).Methods("GET")
 	r.Handle("/complement", complementHandler).Methods("GET")
+	// Templating endpoints
+	r.Handle("/playlists/{id:[a-zA-Z0-9]+}", playlistHandler).Methods("GET")
+	// Health check
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}).Methods("GET")
@@ -47,6 +51,17 @@ func CreateRouter(spotifyService spotify.Service, serverLogger log.Logger) http.
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}),
 		handlers.AllowedOrigins([]string{"*"}))(r)
+}
+
+func playlistEndpoint() endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(transport.AuthRequest)
+		auth, err := service.Playlist(req.Token, req.PlaylistID)
+		if err != nil {
+			return nil, err
+		}
+		return auth, nil
+	}
 }
 
 func playlistsEndpoint() endpoint.Endpoint {
