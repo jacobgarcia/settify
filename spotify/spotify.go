@@ -98,7 +98,7 @@ type Playlist struct {
 	Tracks int    `json:"tracks,omitempty"`
 	URI    string `json:"uri,omitempty"`
 	Image  string `json:"image,omitempty"`
-	Likes  int    `json:"likes"`
+	Likes  int    `json:"likes,omitempty"`
 }
 
 // User encodes/decodes the user id for Spotify
